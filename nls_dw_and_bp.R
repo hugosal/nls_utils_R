@@ -1,7 +1,7 @@
 #Funciones para analisis de residuales de objetos de clase nls.
 #pruebas Durbin-Watson y Breusch-Pagan
 #https://github.com/hugosal
-#18/03/2020
+#31/03/2020
 
 #Estas funciones son adaptaciones de las funciones durbinWatsonTest (car version 3.0-6)
 #Fox, J. (2016) Applied Regression Analysis and Generalized Linear Models, Third Edition. Sage.
@@ -11,6 +11,7 @@
 #para la funcion durbinWatsonTest_nls el paquete car debe estar instalado
 durbinWatsonTest_nls <- function(model_nls, alternative="positive",
                                  max.lag=1, method=c("resample","normal"),reps=100){
+  if (!alternative %in% c("two.sided", "positive", "negative"))stop("Alternative must be 'two.sided', 'positive' or 'negative'")
   if (!inherits(model_nls, "nls"))stop("method only for nls objects")
   residuals<-as.vector(resid(model_nls))
   if (any(is.na(residuals))) stop ("residuals include missing values")
@@ -18,7 +19,7 @@ durbinWatsonTest_nls <- function(model_nls, alternative="positive",
   mu<-fitted(model_nls)
   if(!inherits(model_nls$data,"name")) stop("missign data argument on nls call")
   data_base<-eval(model_nls$data)
-  X<-as.matrix(data_base[,colnames(data_base)%in%all.vars(formula(model_nls))[-1]])
+  X<-as.matrix(data_base[,colnames(data_base)%in%all.vars(formula(model_nls))[-1],drop = FALSE])
   n <- length(residuals)
   r <- dw <-rep(0, max.lag)
   S <- sigma(model_nls)
@@ -30,7 +31,14 @@ durbinWatsonTest_nls <- function(model_nls, alternative="positive",
   Y <- if (method == "resample") 
     matrix(sample(residuals, n*reps, replace=TRUE), n, reps) + matrix(mu, n, reps)
   else matrix(rnorm(n*reps, 0, S), n, reps) + matrix(mu, n, reps)
-  E <- residuals(lm(Y ~ X - 1))
+  ##nuevas
+  E<-apply(Y,2,function(Y)residuals(nls(formula(model_nls),
+                                         start =as.list(coef(model_nls)),
+                                         data = data.frame(matrix(Y,ncol = 1,dimnames = list(NULL,all.vars(formula(model_nls))[1]))
+                                                           ,X))))
+
+  #nuevas
+  #E <- residuals(lm(Y ~ X - 1))#linea original
   DW <- apply(E, 2, car::durbinWatsonTest, max.lag=max.lag)
   if (max.lag == 1) DW <- rbind(DW)
   p <- rep(0, max.lag)
