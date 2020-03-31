@@ -31,14 +31,14 @@ durbinWatsonTest_nls <- function(model_nls, alternative="positive",
   Y <- if (method == "resample") 
     matrix(sample(residuals, n*reps, replace=TRUE), n, reps) + matrix(mu, n, reps)
   else matrix(rnorm(n*reps, 0, S), n, reps) + matrix(mu, n, reps)
-  ##nuevas
-  E<-apply(Y,2,function(Y)residuals(nls(formula(model_nls),
-                                         start =as.list(coef(model_nls)),
-                                         data = data.frame(matrix(Y,ncol = 1,dimnames = list(NULL,all.vars(formula(model_nls))[1]))
-                                                           ,X))))
-
-  #nuevas
-  #E <- residuals(lm(Y ~ X - 1))#linea original
+  #begin alternative to residual estimations 
+  #E<-apply(Y,2,function(Y)residuals(nls(formula(model_nls),
+  #                                       start =as.list(coef(model_nls)),
+  #                                       data = data.frame(matrix(Y,ncol = 1,dimnames = list(NULL,all.vars(formula(model_nls))[1]))
+  #                                                       ,X))))
+  #
+  #end of alternative
+  E <- residuals(lm(Y ~ X - 1))#linea original
   DW <- apply(E, 2, car::durbinWatsonTest, max.lag=max.lag)
   if (max.lag == 1) DW <- rbind(DW)
   p <- rep(0, max.lag)
